@@ -8,7 +8,6 @@
 #include "afxdialogex.h"
 #include <utility>
 #include <tuple>
-#include <vector>
 #include "Utils.h"
 #include <omp.h>
 
@@ -22,12 +21,12 @@
 
 void CStaticImage::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-	GetParent()->SendMessage( CApplicationDlg::WM_DRAW_IMAGE, (WPARAM)lpDrawItemStruct);
+	GetParent()->SendMessage(CApplicationDlg::WM_DRAW_IMAGE, (WPARAM)lpDrawItemStruct);
 }
 
 void CStaticHistogram::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-	GetParent()->SendMessage( CApplicationDlg::WM_DRAW_HISTOGRAM, (WPARAM)lpDrawItemStruct);
+	GetParent()->SendMessage(CApplicationDlg::WM_DRAW_HISTOGRAM, (WPARAM)lpDrawItemStruct);
 }
 
 
@@ -38,7 +37,7 @@ class CAboutDlg : public CDialogEx
 public:
 	CAboutDlg() : CDialogEx(IDD_ABOUTBOX) {}
 
-// Dialog Data
+	// Dialog Data
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
@@ -49,7 +48,7 @@ protected:
 		CDialogEx::DoDataExchange(pDX);
 	}
 
-// Implementation
+	// Implementation
 protected:
 	DECLARE_MESSAGE_MAP()
 };
@@ -242,6 +241,14 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_COMMAND(ID_LOG_CLEAR, OnLogClear)
 	ON_UPDATE_COMMAND_UI(ID_LOG_CLEAR, OnUpdateLogClear)
 	ON_WM_DESTROY()
+	ON_COMMAND(ID_HISTOGRAM_RED, &CApplicationDlg::OnHistogramRed)
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_RED, &CApplicationDlg::OnUpdateHistogramRed)
+	ON_COMMAND(ID_HISTOGRAM_BLUE, &CApplicationDlg::OnHistogramBlue)
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_BLUE, &CApplicationDlg::OnUpdateHistogramBlue)
+	ON_COMMAND(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnHistogramGreen)
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnUpdateHistogramGreen)
+	ON_COMMAND(ID_HISTOGRAM_JAS, &CApplicationDlg::OnHistogramJas)
+	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_JAS, &CApplicationDlg::OnUpdateHistogramJas)
 END_MESSAGE_MAP()
 
 
@@ -256,18 +263,50 @@ void CApplicationDlg::OnDestroy()
 		m_pBitmap = nullptr;
 	}
 }
+namespace
+{
+	void DrawHistogram(CDC *&DC, CRect &rc, std::vector<int> &hist, COLORREF clr)
+	{
+		double scaleY = 0;
+		double scaleX = 0;
+		int vyska = rc.bottom - rc.top;
+		int sirka = rc.right - rc.left;
+		for (int i = 0; i < hist.size(); i++)
+		{
+			if (scaleY < hist[i])
+			{
+				scaleY = hist[i];
+			}
+			if (hist[i] != 0)
+			{
+				scaleX++;
+			}
+		}
+		scaleY = vyska / scaleY;
+		scaleX = sirka / scaleX;
+		for (int i = 0; i < hist.size(); i++)
+		{
 
+			DC->FillSolidRect(rc.left + (i)*scaleX, rc.bottom - (hist[i])*scaleY, 1, (hist[i])*scaleY, clr);
+		}
+		return;
+	}
+}
 LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 {
+
 	LPDRAWITEMSTRUCT lpDI = (LPDRAWITEMSTRUCT)wParam;
 
 	CDC * pDC = CDC::FromHandle(lpDI->hDC);
 
 	pDC->FillSolidRect(&(lpDI->rcItem), RGB(255, 255, 255));
-
+	CRect rct = lpDI->rcItem;
+	if (m_bHistRed) DrawHistogram(pDC, rct, m_uHistRed, RGB(255, 0, 0));
+	if (m_bHistGreen) DrawHistogram(pDC, rct, m_uHistBlue, RGB(0, 255, 0));
+	if (m_bHistBlue) DrawHistogram(pDC, rct, m_uHistGreen, RGB(0, 0, 255));
+	if (m_bHistJas) DrawHistogram(pDC, rct, m_uHistJas, RGB(0, 0, 0));
 	CBrush brBlack(RGB(0, 0, 0));
 	pDC->FrameRect(&(lpDI->rcItem), &brBlack);
-
 	return S_OK;
 }
 
@@ -517,7 +556,7 @@ void CApplicationDlg::OnFileOpen()
 
 		std::vector<CString> names;
 
-		std::tie( m_csDirectory, names) = Utils::ParseFiles(cs);
+		std::tie(m_csDirectory, names) = Utils::ParseFiles(cs);
 
 		for (int i = 0; i < (int)names.size(); ++i)
 		{
@@ -568,6 +607,11 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 	return TRUE;
 }
 
+namespace
+{
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj);
+}
+
 void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
@@ -585,7 +629,14 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 
 	if (!csFileName.IsEmpty())
 	{
-		m_pBitmap = Gdiplus::Bitmap::FromFile(csFileName);
+		LoadAndCalc(csFileName, m_pBitmap, m_uHistRed, m_uHistGreen, m_uHistBlue, m_uHistJas);
+	}
+	else
+	{
+		m_uHistRed.clear();
+		m_uHistGreen.clear();
+		m_uHistBlue.clear();
+		m_uHistJas.clear();
 	}
 
 	m_ctrlImage.Invalidate();
@@ -610,11 +661,106 @@ void CApplicationDlg::OnUpdateLogOpen(CCmdUI *pCmdUI)
 
 void CApplicationDlg::OnLogClear()
 {
-	m_ctrlLog.SendMessage( CLogDlg::WM_TEXT);
+	m_ctrlLog.SendMessage(CLogDlg::WM_TEXT);
 }
 
 
 void CApplicationDlg::OnUpdateLogClear(CCmdUI *pCmdUI)
 {
 	pCmdUI->Enable(::IsWindow(m_ctrlLog.m_hWnd) && m_ctrlLog.IsWindowVisible());
+}
+
+void CApplicationDlg::OnHistogramRed()
+{
+	// TODO: Add your command handler code here
+	m_bHistRed = !m_bHistRed;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateHistogramRed(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (m_bHistRed)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
+}
+
+
+void CApplicationDlg::OnHistogramBlue()
+{
+	// TODO: Add your command handler code here
+	m_bHistBlue = !m_bHistBlue;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateHistogramBlue(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (m_bHistBlue)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
+}
+
+
+void CApplicationDlg::OnHistogramGreen()
+{
+	// TODO: Add your command handler code here
+	m_bHistGreen = !m_bHistGreen;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateHistogramGreen(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (m_bHistGreen)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
+}
+
+
+void CApplicationDlg::OnHistogramJas()
+{
+	// TODO: Add your command handler code here
+	m_bHistJas = !m_bHistJas;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateHistogramJas(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (m_bHistJas)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
+}
+
+namespace
+{
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj)
+	{
+		bitmp = Gdiplus::Bitmap::FromFile(fileName);
+		if (bitmp == NULL)
+			return;
+		histr.clear();
+		histg.clear();
+		histb.clear();
+		histj.clear();;
+		Gdiplus::Color tmp;
+		histr.assign(256, 0);
+		histg.assign(256, 0);
+		histb.assign(256, 0);
+		histj.assign(256, 0);
+		for (int i = 0; i < bitmp->GetWidth(); i++)
+		{
+			for (int j = 0; j < bitmp->GetHeight(); j++)
+			{
+				bitmp->GetPixel(i, j, &tmp);
+				histr[tmp.GetRed()]++;
+				histg[tmp.GetGreen()]++;
+				histb[tmp.GetBlue()]++;
+				histj[(double)(0.2126*tmp.GetRed() + 0.7152*tmp.GetGreen() + 0.0722*tmp.GetBlue())]++;
+			}
+		}
+		bitmp = Gdiplus::Bitmap::FromFile(fileName);
+		return;
+	}
 }

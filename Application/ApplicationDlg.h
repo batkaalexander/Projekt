@@ -6,6 +6,8 @@
 
 #include "LogDlg.h"
 #include <GdiPlus.h>
+#include <stdlib.h>
+#include <vector>
 
 class CStaticImage : public CStatic
 {
@@ -22,7 +24,7 @@ class CStaticHistogram : public CStatic
 // CApplicationDlg dialog
 class CApplicationDlg : public CDialogEx
 {
-// Construction
+	// Construction
 public:
 	enum
 	{
@@ -37,16 +39,25 @@ public:
 	enum { IDD = IDD_APPLICATION_DIALOG };
 #endif
 
-	protected:
+protected:
 	void DoDataExchange(CDataExchange* pDX) override;	// DDX/DDV support
 
 	void OnOK() override {}
 	void OnCancel() override {}
 
 
-// Implementation
+	// Implementation
 protected:
 	HICON m_hIcon;
+
+	bool m_bHistRed = false;
+	bool m_bHistBlue = false;
+	bool m_bHistGreen = false;
+	bool m_bHistJas = false;
+	std::vector<int> m_uHistRed;
+	std::vector<int> m_uHistBlue;
+	std::vector<int> m_uHistGreen;
+	std::vector<int> m_uHistJas;
 
 	// Generated message map functions
 	BOOL OnInitDialog() override;
@@ -80,7 +91,7 @@ protected:
 
 	CLogDlg m_ctrlLog;
 
-	Gdiplus::Bitmap * m_pBitmap;
+	Gdiplus::Bitmap *m_pBitmap;
 	DWORD m_nMaxThreads;
 public:
 	afx_msg void OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult);
@@ -88,4 +99,12 @@ public:
 	afx_msg void OnUpdateLogOpen(CCmdUI *pCmdUI);
 	afx_msg void OnLogClear();
 	afx_msg void OnUpdateLogClear(CCmdUI *pCmdUI);
+	afx_msg void OnHistogramRed();
+	afx_msg void OnUpdateHistogramRed(CCmdUI *pCmdUI);
+	afx_msg void OnHistogramBlue();
+	afx_msg void OnUpdateHistogramBlue(CCmdUI *pCmdUI);
+	afx_msg void OnHistogramGreen();
+	afx_msg void OnUpdateHistogramGreen(CCmdUI *pCmdUI);
+	afx_msg void OnHistogramJas();
+	afx_msg void OnUpdateHistogramJas(CCmdUI *pCmdUI);
 };
