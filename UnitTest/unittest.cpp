@@ -6,6 +6,11 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #include "../Library/Library.h"
 
 #include <vector>
+#include "stdafx.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <fstream>
+#include <string>
 
 namespace UnitTest
 {
@@ -28,6 +33,11 @@ namespace UnitTest
 			Assert::IsTrue(result.second.size() == 2, L"count of files");
 			Assert::AreEqual(result.second[0], L"file1.name.ext", "filename 1");
 			Assert::AreEqual(result.second[1], L"file2.name.ext", "filename 2");
+		}
+
+		TEST_METHOD(CalcHistogram)
+		{
+
 		}
 	};
 }

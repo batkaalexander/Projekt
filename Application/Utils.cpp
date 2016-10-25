@@ -3,6 +3,24 @@
 
 namespace Utils
 {
+	void CalcHistogram(std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, void* scan0, UINT32 stride, int height, int width)
+	{
+		UINT32 *pLime = (UINT32*)scan0;
+		for (int i = 0; i < height; i++)
+		{
+			pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
+			for (int j = 0; j < width; j++)
+			{
+				//bitmp->GetPixel(i, j, &tmp);
+				histr[((*pLime) >> 16) & 0xff]++;
+				histg[((*pLime) >> 8) & 0xff]++;
+				histb[(*pLime) & 0xff]++;
+				histj[(double)(0.2126*(((*pLime) >> 16) & 0xff) + 0.7152*(((*pLime) >> 8) & 0xff) + 0.0722*((*pLime) & 0xff))]++;
+				pLime++;
+			}
+		}
+		return;
+	}
 	//	parse file names from file name string in OPENFILENAME struct
 	//	returns pair of directory and vector of filenames
 	//

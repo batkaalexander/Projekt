@@ -610,6 +610,7 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj);
+	//void CalcHistogram(std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, void* scan0, UINT32 stride, int height, int width);
 }
 
 void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
@@ -740,27 +741,19 @@ namespace
 		bitmp = Gdiplus::Bitmap::FromFile(fileName);
 		if (bitmp == NULL)
 			return;
+		Gdiplus::BitmapData* bmpData = new Gdiplus::BitmapData();
+		Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
+		bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
 		histr.clear();
 		histg.clear();
 		histb.clear();
 		histj.clear();;
-		Gdiplus::Color tmp;
 		histr.assign(256, 0);
 		histg.assign(256, 0);
 		histb.assign(256, 0);
 		histj.assign(256, 0);
-		for (int i = 0; i < bitmp->GetWidth(); i++)
-		{
-			for (int j = 0; j < bitmp->GetHeight(); j++)
-			{
-				bitmp->GetPixel(i, j, &tmp);
-				histr[tmp.GetRed()]++;
-				histg[tmp.GetGreen()]++;
-				histb[tmp.GetBlue()]++;
-				histj[(double)(0.2126*tmp.GetRed() + 0.7152*tmp.GetGreen() + 0.0722*tmp.GetBlue())]++;
-			}
-		}
-		bitmp = Gdiplus::Bitmap::FromFile(fileName);
+		Utils::CalcHistogram(histr,histg,histb,histj, bmpData->Scan0, (UINT32)bmpData->Stride,bitmp->GetHeight(),bitmp->GetWidth());
+		bitmp->UnlockBits(bmpData);
 		return;
 	}
 }
