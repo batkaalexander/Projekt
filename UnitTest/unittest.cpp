@@ -39,15 +39,31 @@ namespace UnitTest
 	TEST_CLASS(HistogramUnitTest)
 	{
 	public:
-		TEST_METHOD(CalcHistogram)
+		TEST_METHOD(TestHistogram)
 		{
 			std::vector<int> r, g, b, j;
+			int h = 256;
+			int w = 256;
 			r.assign(256, 0);
 			g.assign(256, 0);
 			b.assign(256, 0);
 			j.assign(256, 0);
-			CalcHistogram(r, g, b, j,nullptr,0,0,0);
+
 			//test goes here
+
+			UINT32 pBMP[256][256];
+			memset(pBMP, 0, sizeof(UINT32) * h * w);
+			for (int i = 0; i < h; i++)
+			{
+				for (int j = 0; j < w; j++)
+				{
+					pBMP[i][j] = 0x99FF55;
+				}
+			}
+			CalcHistogram(r, g, b, j, pBMP, w, h, w);
+			Assert::AreEqual(r[153], h * w, L"cerveny");
+			Assert::AreEqual(g[255], h * w, L"zeleny");
+			Assert::AreEqual(b[85], h * w, L"modry");
 		}
 	};
 }
