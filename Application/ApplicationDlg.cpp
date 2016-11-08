@@ -10,6 +10,7 @@
 #include <tuple>
 #include "Utils.h"
 #include <omp.h>
+#include <thread>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -235,6 +236,7 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_WM_SIZING()
 	ON_MESSAGE(WM_DRAW_IMAGE, OnDrawImage)
 	ON_MESSAGE(WM_DRAW_HISTOGRAM, OnDrawHistogram)
+	ON_MESSAGE(WM_SET_BITMAP, OnSetBitmap)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_FILE_LIST, OnLvnItemchangedFileList)
 	ON_COMMAND(ID_LOG_OPEN, OnLogOpen)
 	ON_UPDATE_COMMAND_UI(ID_LOG_OPEN, OnUpdateLogOpen)
@@ -629,7 +631,32 @@ void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
 
 	if (!csFileName.IsEmpty())
 	{
-		LoadAndCalc(csFileName, m_pBitmap, m_uHistRed, m_uHistGreen, m_uHistBlue, m_uHistJas);
+		std::thread thread([this, csFileName]() {
+			Gdiplus::Bitmap *bmp = m_pBitmap;
+			std::vector<int> lhistr;
+			std::vector<int> lhistg;
+			std::vector<int> lhistb;
+			std::vector<int> lhistj;
+			LoadAndCalc(csFileName, bmp, lhistr, lhistg, lhistb, lhistj);
+			if (std::this_thread::get_id() == m_thread_id)
+			{
+				m_pBitmap = bmp;
+				m_uHistRed = std::move(lhistr);
+				m_uHistGreen = std::move(lhistg);
+				m_uHistBlue = std::move(lhistb);
+				m_uHistJas = std::move(lhistj);
+				m_thread_id = std::thread::id();
+				std::tuple<Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> obj = std::make_tuple(bmp,lhistr, lhistg, lhistb, lhistj);
+				SendMessage(WM_SET_BITMAP, (WPARAM)&obj);
+			}
+			else
+			{
+				delete bmp;
+			}
+			m_ctrlImage.Invalidate();
+			m_ctrlHistogram.Invalidate();
+		});
+		thread.detach();
 	}
 	else
 	{
@@ -733,6 +760,17 @@ void CApplicationDlg::OnUpdateHistogramJas(CCmdUI *pCmdUI)
 	else pCmdUI->SetCheck(0);
 }
 
+LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
+{
+	auto ptuple = (std::tuple<Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> *)(wParam);
+	std::get<0>(*ptuple);
+	return 0;
+	/*
+	tu nastavit vsetko pre dane okno
+	+ lambda funkciu dat do jednej funkcie ako
+	*/
+}
+
 namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj)
@@ -751,7 +789,7 @@ namespace
 		histg.assign(256, 0);
 		histb.assign(256, 0);
 		histj.assign(256, 0);
-		Utils::CalcHistogram(histr,histg,histb,histj, bmpData->Scan0, (UINT32)bmpData->Stride,bitmp->GetHeight(),bitmp->GetWidth());
+		Utils::CalcHistogram(histr, histg, histb, histj, bmpData->Scan0, (UINT32)bmpData->Stride, bitmp->GetHeight(), bitmp->GetWidth());
 		bitmp->UnlockBits(bmpData);
 		return;
 	}

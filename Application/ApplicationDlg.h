@@ -8,6 +8,8 @@
 #include <GdiPlus.h>
 #include <stdlib.h>
 #include <vector>
+#include <thread>
+#include <atomic>
 
 class CStaticImage : public CStatic
 {
@@ -29,7 +31,8 @@ public:
 	enum
 	{
 		WM_DRAW_IMAGE = (WM_USER + 1),
-		WM_DRAW_HISTOGRAM
+		WM_DRAW_HISTOGRAM,
+		WM_SET_BITMAP
 	};
 
 	CApplicationDlg(CWnd* pParent = NULL);	// standard constructor
@@ -58,6 +61,7 @@ protected:
 	std::vector<int> m_uHistBlue;
 	std::vector<int> m_uHistGreen;
 	std::vector<int> m_uHistJas;
+	std::atomic<std::thread::id> m_thread_id;
 
 	// Generated message map functions
 	BOOL OnInitDialog() override;
@@ -77,6 +81,7 @@ public:
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg LRESULT OnDrawImage(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnDrawHistogram(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnSetBitmap(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnDestroy();
 protected:
 	CListCtrl m_ctrlFileList;
