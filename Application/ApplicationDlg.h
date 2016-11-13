@@ -62,7 +62,7 @@ protected:
 	std::vector<int> m_uHistGreen;
 	std::vector<int> m_uHistJas;
 	std::atomic<std::thread::id> m_thread_id;
-
+	void OpenImage(CString fName);
 	// Generated message map functions
 	BOOL OnInitDialog() override;
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
