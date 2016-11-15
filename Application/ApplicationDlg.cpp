@@ -251,6 +251,18 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_GREEN, &CApplicationDlg::OnUpdateHistogramGreen)
 	ON_COMMAND(ID_HISTOGRAM_JAS, &CApplicationDlg::OnHistogramJas)
 	ON_UPDATE_COMMAND_UI(ID_HISTOGRAM_JAS, &CApplicationDlg::OnUpdateHistogramJas)
+	ON_COMMAND(THREADS_1, &CApplicationDlg::On1)
+	ON_UPDATE_COMMAND_UI(THREADS_1, &CApplicationDlg::OnUpdate1)
+	ON_COMMAND(THREADS_AUTO, &CApplicationDlg::OnAuto)
+	ON_UPDATE_COMMAND_UI(THREADS_AUTO, &CApplicationDlg::OnUpdateAuto)
+	ON_COMMAND(THREADS_2, &CApplicationDlg::On2)
+	ON_UPDATE_COMMAND_UI(THREADS_2, &CApplicationDlg::OnUpdate2)
+	ON_COMMAND(THREADS_4, &CApplicationDlg::On4)
+	ON_UPDATE_COMMAND_UI(THREADS_4, &CApplicationDlg::OnUpdate4)
+	ON_COMMAND(THREADS_8, &CApplicationDlg::On8)
+	ON_UPDATE_COMMAND_UI(THREADS_8, &CApplicationDlg::OnUpdate8)
+	ON_COMMAND(THREADS_16, &CApplicationDlg::On16)
+	ON_UPDATE_COMMAND_UI(THREADS_16, &CApplicationDlg::OnUpdate16)
 END_MESSAGE_MAP()
 
 
@@ -611,7 +623,7 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 
 namespace
 {
-	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj);
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, const int tn);
 }
 
 void CApplicationDlg::OpenImage(CString fName)
@@ -622,7 +634,7 @@ void CApplicationDlg::OpenImage(CString fName)
 	std::vector<int> lhistb;
 	std::vector<int> lhistj;
 	m_thread_id = std::this_thread::get_id();
-	LoadAndCalc(fName, bmp, lhistr, lhistg, lhistb, lhistj);
+	LoadAndCalc(fName, bmp, lhistr, lhistg, lhistb, lhistj, num_m_thread);
 	if (std::this_thread::get_id() == m_thread_id)
 	{
 		std::tuple<Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> obj(bmp, lhistr, lhistg, lhistb, lhistj);
@@ -773,7 +785,7 @@ LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 
 namespace
 {
-	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj)
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, const int tn)
 	{
 		bitmp = Gdiplus::Bitmap::FromFile(fileName);
 		if (bitmp == NULL)
@@ -789,8 +801,129 @@ namespace
 		histg.assign(256, 0);
 		histb.assign(256, 0);
 		histj.assign(256, 0);
-		Utils::CalcHistogram(histr, histg, histb, histj, bmpData->Scan0, (UINT32)bmpData->Stride, bitmp->GetHeight(), bitmp->GetWidth());
+		std::vector<std::vector<int>> histRT;
+		std::vector<std::vector<int>> histGT;
+		std::vector<std::vector<int>> histBT;
+		std::vector<std::vector<int>> histJT;
+		std::vector<std::thread> thready;
+		histRT.assign(tn, std::vector<int>());
+		histGT.assign(tn, std::vector<int>());
+		histBT.assign(tn, std::vector<int>());
+		histJT.assign(tn, std::vector<int>());
+		for (int i = 0; i < tn; i++)
+		{
+			histRT[i].assign(256, 0);
+			histGT[i].assign(256, 0);
+			histBT[i].assign(256, 0);
+			histJT[i].assign(256, 0);
+			thready.push_back(std::thread(&Utils::CalcHistogram, std::ref(histRT[i]), std::ref(histGT[i]), std::ref(histBT[i]), std::ref(histJT[i]), (void *)((UINT32 *)(bmpData->Scan0) + (i*bitmp->GetHeight()*(UINT32)bmpData->Stride / (tn * sizeof(UINT32)))), (UINT32)bmpData->Stride, bitmp->GetHeight() / tn, bitmp->GetWidth()));
+		}
+		for (int i = 0; i < tn; i++)
+		{
+			thready[i].join();
+		}
+		for (int i = 0; i < tn; i++)
+		{
+			for (int j = 0; j < 256; j++)
+			{
+				histr[j] += histRT[i][j];
+				histg[j] += histGT[i][j];
+				histb[j] += histBT[i][j];
+				histj[j] += histJT[i][j];
+			}
+		}
 		bitmp->UnlockBits(bmpData);
 		return;
 	}
+}
+
+void CApplicationDlg::On1()
+{
+	// TODO: Add your command handler code here
+	num_m_thread = 1;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdate1(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (num_m_thread == 1)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
+}
+
+
+void CApplicationDlg::OnAuto()
+{
+	// TODO: Add your command handler code here
+}
+
+
+void CApplicationDlg::OnUpdateAuto(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+}
+
+
+void CApplicationDlg::On2()
+{
+	// TODO: Add your command handler code here
+	num_m_thread = 2;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdate2(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (num_m_thread == 2)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
+}
+
+
+void CApplicationDlg::On4()
+{
+	// TODO: Add your command handler code here
+	num_m_thread = 4;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdate4(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (num_m_thread == 4)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
+}
+
+
+void CApplicationDlg::On8()
+{
+	// TODO: Add your command handler code here
+	num_m_thread = 8;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdate8(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (num_m_thread == 8)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
+}
+
+
+void CApplicationDlg::On16()
+{
+	// TODO: Add your command handler code here
+	num_m_thread = 16;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdate16(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+	if (num_m_thread == 16)pCmdUI->SetCheck(1);
+	else pCmdUI->SetCheck(0);
 }

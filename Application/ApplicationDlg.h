@@ -62,6 +62,7 @@ protected:
 	std::vector<int> m_uHistGreen;
 	std::vector<int> m_uHistJas;
 	std::atomic<std::thread::id> m_thread_id;
+	std::atomic<int> num_m_thread = 1;
 	void OpenImage(CString fName);
 	// Generated message map functions
 	BOOL OnInitDialog() override;
@@ -112,4 +113,16 @@ public:
 	afx_msg void OnUpdateHistogramGreen(CCmdUI *pCmdUI);
 	afx_msg void OnHistogramJas();
 	afx_msg void OnUpdateHistogramJas(CCmdUI *pCmdUI);
+	afx_msg void On1();
+	afx_msg void OnUpdate1(CCmdUI *pCmdUI);
+	afx_msg void OnAuto();
+	afx_msg void OnUpdateAuto(CCmdUI *pCmdUI);
+	afx_msg void On2();
+	afx_msg void OnUpdate2(CCmdUI *pCmdUI);
+	afx_msg void On4();
+	afx_msg void OnUpdate4(CCmdUI *pCmdUI);
+	afx_msg void On8();
+	afx_msg void OnUpdate8(CCmdUI *pCmdUI);
+	afx_msg void On16();
+	afx_msg void OnUpdate16(CCmdUI *pCmdUI);
 };

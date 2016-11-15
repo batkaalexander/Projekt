@@ -11,7 +11,6 @@ namespace Utils
 			pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
 			for (int j = 0; j < width; j++)
 			{
-				//bitmp->GetPixel(i, j, &tmp);
 				histr[((*pLime) >> 16) & 0xff]++;
 				histg[((*pLime) >> 8) & 0xff]++;
 				histb[((*pLime)) & 0xff]++;
