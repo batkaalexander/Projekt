@@ -125,4 +125,8 @@ public:
 	afx_msg void OnUpdate8(CCmdUI *pCmdUI);
 	afx_msg void On16();
 	afx_msg void OnUpdate16(CCmdUI *pCmdUI);
+	afx_msg void OnEfectRotateleft();
+	afx_msg void OnUpdateEfectRotateleft(CCmdUI *pCmdUI);
+	afx_msg void OnUpdateEfectRotateright(CCmdUI *pCmdUI);
+	afx_msg void OnEfectRotateright();
 };

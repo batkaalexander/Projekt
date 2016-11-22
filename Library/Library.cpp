@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "Library.h"
 #include "../Application/Utils.h"
+#include <functional>
 
 
 //// This is an example of an exported variable
@@ -30,7 +31,12 @@ LIBRARY_API std::pair< CString, std::vector<CString> > ParseFiles(LPCTSTR lpstrF
 	return Utils::ParseFiles(lpstrFile);
 }
 
-LIBRARY_API void CalcHistogram(std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, void* scan0, UINT32 stride, int height, int width)
+LIBRARY_API void CalcHistogram(std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, void* scan0, UINT32 stride, int height, int width, std::function<bool()> fn)
 {
-	return Utils::CalcHistogram(histr, histg, histb, histj, scan0, stride, height, width);
+	return Utils::CalcHistogram(histr, histg, histb, histj, scan0, stride, height, width, fn);
+}
+
+LIBRARY_API void Threading(std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, int width, int height, void* scan0, UINT32 stride, int n, std::function<bool()> fn)
+{
+	return Utils::Threading(histr, histg, histb, histj, width, height, scan0, stride, n, fn);
 }
