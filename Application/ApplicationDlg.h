@@ -64,7 +64,8 @@ protected:
 	std::vector<int> m_uHistJas;
 	std::atomic<std::thread::id> m_thread_id;
 	std::atomic<int> num_m_thread = 1;
-	std::atomic<bool> m_rightRot;
+	// 0 none, 1 right, 2 left
+	int m_rightRot=0;
 	void OpenImage(CString fName);
 	void RotateImage();
 	// Generated message map functions

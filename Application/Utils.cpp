@@ -59,12 +59,12 @@ namespace Utils
 		return;
 	}
 
-	void Rotate(void* scan0, void* scan0C, UINT32 stride, int height, int width, bool right)
+	void Rotate(void* scan0, void* scan0C, UINT32 stride, int height, int width, int right)
 	{
 		UINT32 *pLime = (UINT32*)scan0;
 		UINT32 *pLimeC = (UINT32*)scan0C;
 		//right = true rotate right 90
-		if (right)
+		if (right==1)
 		{
 			for (int i = 0; i < height; i++)
 			{
@@ -78,14 +78,14 @@ namespace Utils
 			}
 		}
 		//right = false rotate left 90
-		else
+		else if(right == 2)
 		{
 			for (int i = 0; i < height; i++)
 			{
 				for (int j = 0; j < width; j++)
 				{
-					pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
-					pLimeC = (UINT32*)((uint8_t*)scan0 + stride*(width - j) + i);
+					pLime = (UINT32*)((uint8_t*)scan0 + stride*((uint8_t)i));
+					pLimeC = (UINT32*)((uint8_t*)scan0 + stride*((uint8_t)width - (uint8_t)j) + (uint8_t)i);
 					*pLimeC = *pLime;
 					pLime++;
 				}

@@ -632,7 +632,7 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, const int tn, std::function<bool()> fn);
-	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, bool right);
+	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, int right);
 }
 
 void CApplicationDlg::OpenImage(CString fName)
@@ -658,10 +658,13 @@ void CApplicationDlg::OpenImage(CString fName)
 
 void CApplicationDlg::RotateImage()
 {
-	Gdiplus::Bitmap *bmp = m_pBitmap;
-	ProcessAndRotate(bmp, m_rightRot);
-	std::tuple<Gdiplus::Bitmap*> obj(bmp);
-	SendMessage(WM_ROTATE_IMAGE, (WPARAM)&obj);
+	if (m_pBitmap != nullptr)
+	{
+		Gdiplus::Bitmap *bmp = m_pBitmap;
+		ProcessAndRotate(bmp, m_rightRot);
+		std::tuple<Gdiplus::Bitmap*> obj(bmp);
+		SendMessage(WM_ROTATE_IMAGE, (WPARAM)&obj);
+	}
 }
 
 void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
@@ -788,6 +791,7 @@ LRESULT CApplicationDlg::OnRotateBitmap(WPARAM wParam, LPARAM lParam)
 {
 	auto ptuple = (std::tuple<Gdiplus::Bitmap*> *)(wParam);
 	m_pBitmap = std::get<0>(*ptuple);
+	m_rightRot = 0;
 	return 0;
 }
 
@@ -907,14 +911,14 @@ void CApplicationDlg::OnUpdate16(CCmdUI *pCmdUI)
 void CApplicationDlg::OnEfectRotateleft()
 {
 	// TODO: Add your command handler code here
-	m_rightRot = false;
+	m_rightRot = 2;
 	Invalidate();
 }
 
 void CApplicationDlg::OnEfectRotateright()
 {
 	// TODO: Add your command handler code here
-	m_rightRot = true;
+	m_rightRot = 1;
 	Invalidate();
 }
 
@@ -953,19 +957,23 @@ namespace
 		bitmp->UnlockBits(bmpData);
 		return;
 	}
-	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, bool right)
+
+	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, int right)
 	{
-		Gdiplus::BitmapData* bmpData = new Gdiplus::BitmapData();
-		Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
-		Gdiplus::Bitmap* bitmpC = bitmp->Clone(rectangle, PixelFormat32bppRGB);
-		Gdiplus::BitmapData* bmpDataC = new Gdiplus::BitmapData();
-		bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
-		bitmpC->LockBits(&rectangle, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, bmpDataC);
+		if (right != 0)
+		{
+			Gdiplus::BitmapData* bmpData = new Gdiplus::BitmapData();
+			Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
+			Gdiplus::Bitmap* bitmpC = bitmp->Clone(rectangle, PixelFormat32bppRGB);
+			Gdiplus::BitmapData* bmpDataC = new Gdiplus::BitmapData();
+			bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
+			bitmpC->LockBits(&rectangle, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, bmpDataC);
 
-		Utils::Rotate(bmpData->Scan0, bmpDataC->Scan0, bmpData->Stride, bitmp->GetWidth(), bitmp->GetHeight(), right);
+			Utils::Rotate(bmpData->Scan0, bmpDataC->Scan0, bmpData->Stride, bitmp->GetWidth(), bitmp->GetHeight(), right);
 
-		bitmpC->UnlockBits(bmpDataC);
-		bitmp->UnlockBits(bmpData);
-		bitmp = bitmpC->Clone(rectangle, PixelFormat32bppRGB);
+			bitmpC->UnlockBits(bmpDataC);
+			bitmp->UnlockBits(bmpData);
+			bitmp = bitmpC->Clone(rectangle, PixelFormat32bppRGB);
+		}
 	}
 }
