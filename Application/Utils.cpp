@@ -5,25 +5,6 @@
 
 namespace Utils
 {
-	void CalcHistogram(std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, void* scan0, UINT32 stride, int height, int width, std::function<bool()> fn)
-	{
-		UINT32 *pLime = (UINT32*)scan0;
-		for (int i = 0; i < height; i++)
-		{
-			pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
-			if (fn()) return;
-			for (int j = 0; j < width; j++)
-			{
-				histr[((*pLime) >> 16) & 0xff]++;
-				histg[((*pLime) >> 8) & 0xff]++;
-				histb[((*pLime)) & 0xff]++;
-				histj[(double)(0.2126*(((*pLime) >> 16) & 0xff) + 0.7152*(((*pLime) >> 8) & 0xff) + 0.0722*((*pLime) & 0xff))]++;
-				pLime++;
-			}
-		}
-		return;
-	}
-
 	void Threading(std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, int width, int height, void* scan0, UINT32 stride, const int n, std::function<bool()> fn)
 	{
 		std::vector<std::vector<int>> histRT;
@@ -59,18 +40,56 @@ namespace Utils
 		}
 	}
 
-	void Rotate(bool right, Gdiplus::Bitmap &bmp)
+	void CalcHistogram(std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, void* scan0, UINT32 stride, int height, int width, std::function<bool()> fn)
 	{
-		Gdiplus::Bitmap copy();
+		UINT32 *pLime = (UINT32*)scan0;
+		for (int i = 0; i < height; i++)
+		{
+			pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
+			if (fn()) return;
+			for (int j = 0; j < width; j++)
+			{
+				histr[((*pLime) >> 16) & 0xff]++;
+				histg[((*pLime) >> 8) & 0xff]++;
+				histb[((*pLime)) & 0xff]++;
+				histj[(double)(0.2126*(((*pLime) >> 16) & 0xff) + 0.7152*(((*pLime) >> 8) & 0xff) + 0.0722*((*pLime) & 0xff))]++;
+				pLime++;
+			}
+		}
+		return;
+	}
+
+	void Rotate(void* scan0, void* scan0C, UINT32 stride, int height, int width, bool right)
+	{
+		UINT32 *pLime = (UINT32*)scan0;
+		UINT32 *pLimeC = (UINT32*)scan0C;
 		//right = true rotate right 90
 		if (right)
 		{
-
+			for (int i = 0; i < height; i++)
+			{
+				for (int j = 0; j < width; j++)
+				{
+					pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
+					pLimeC = (UINT32*)((uint8_t*)scan0 + stride*(j) - i);
+					*pLimeC = *pLime;
+					pLime++;
+				}
+			}
 		}
 		//right = false rotate left 90
 		else
 		{
-
+			for (int i = 0; i < height; i++)
+			{
+				for (int j = 0; j < width; j++)
+				{
+					pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
+					pLimeC = (UINT32*)((uint8_t*)scan0 + stride*(width - j) + i);
+					*pLimeC = *pLime;
+					pLime++;
+				}
+			}
 		}
 	}
 	//	parse file names from file name string in OPENFILENAME struct

@@ -238,6 +238,7 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_MESSAGE(WM_DRAW_IMAGE, OnDrawImage)
 	ON_MESSAGE(WM_DRAW_HISTOGRAM, OnDrawHistogram)
 	ON_MESSAGE(WM_SET_BITMAP, OnSetBitmap)
+	ON_MESSAGE(WM_ROTATE_IMAGE, OnRotateBitmap)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_FILE_LIST, OnLvnItemchangedFileList)
 	ON_COMMAND(ID_LOG_OPEN, OnLogOpen)
 	ON_UPDATE_COMMAND_UI(ID_LOG_OPEN, OnUpdateLogOpen)
@@ -282,6 +283,7 @@ void CApplicationDlg::OnDestroy()
 		m_pBitmap = nullptr;
 	}
 }
+
 namespace
 {
 	void DrawHistogram(CDC *&DC, CRect &rc, std::vector<int> &hist, COLORREF clr)
@@ -311,6 +313,7 @@ namespace
 		return;
 	}
 }
+
 LRESULT CApplicationDlg::OnDrawHistogram(WPARAM wParam, LPARAM lParam)
 {
 
@@ -629,6 +632,7 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, const int tn, std::function<bool()> fn);
+	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, bool right);
 }
 
 void CApplicationDlg::OpenImage(CString fName)
@@ -650,6 +654,14 @@ void CApplicationDlg::OpenImage(CString fName)
 	{
 		delete bmp;
 	}
+}
+
+void CApplicationDlg::RotateImage()
+{
+	Gdiplus::Bitmap *bmp = m_pBitmap;
+	ProcessAndRotate(bmp, m_rightRot);
+	std::tuple<Gdiplus::Bitmap*> obj(bmp);
+	SendMessage(WM_ROTATE_IMAGE, (WPARAM)&obj);
 }
 
 void CApplicationDlg::OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult)
@@ -772,6 +784,13 @@ void CApplicationDlg::OnUpdateHistogramJas(CCmdUI *pCmdUI)
 	else pCmdUI->SetCheck(0);
 }
 
+LRESULT CApplicationDlg::OnRotateBitmap(WPARAM wParam, LPARAM lParam)
+{
+	auto ptuple = (std::tuple<Gdiplus::Bitmap*> *)(wParam);
+	m_pBitmap = std::get<0>(*ptuple);
+	return 0;
+}
+
 LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 {
 	auto ptuple = (std::tuple<std::thread::id, Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> *)(wParam);
@@ -788,29 +807,6 @@ LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-namespace
-{
-	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, const int tn, std::function<bool()> fn)
-	{
-		bitmp = Gdiplus::Bitmap::FromFile(fileName);
-		if (bitmp == NULL)
-			return;
-		Gdiplus::BitmapData* bmpData = new Gdiplus::BitmapData();
-		Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
-		bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
-		histr.clear();
-		histg.clear();
-		histb.clear();
-		histj.clear();;
-		histr.assign(256, 0);
-		histg.assign(256, 0);
-		histb.assign(256, 0);
-		histj.assign(256, 0);
-		Utils::Threading(histr, histg, histb, histj, bitmp->GetWidth(), bitmp->GetHeight(), bmpData->Scan0, bmpData->Stride , tn, fn);
-		bitmp->UnlockBits(bmpData);
-		return;
-	}
-}
 
 void CApplicationDlg::On1()
 {
@@ -911,24 +907,65 @@ void CApplicationDlg::OnUpdate16(CCmdUI *pCmdUI)
 void CApplicationDlg::OnEfectRotateleft()
 {
 	// TODO: Add your command handler code here
-	Utils::Rotate(false, *m_pBitmap);
+	m_rightRot = false;
 	Invalidate();
 }
 
 void CApplicationDlg::OnEfectRotateright()
 {
 	// TODO: Add your command handler code here
-	Utils::Rotate(true, *m_pBitmap);
+	m_rightRot = true;
 	Invalidate();
 }
 
 void CApplicationDlg::OnUpdateEfectRotateleft(CCmdUI *pCmdUI)
 {
 	// TODO: Add your command update UI handler code here
+	RotateImage();
 }
 
 
 void CApplicationDlg::OnUpdateEfectRotateright(CCmdUI *pCmdUI)
 {
 	// TODO: Add your command update UI handler code here
+	RotateImage();
+}
+
+namespace
+{
+	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, const int tn, std::function<bool()> fn)
+	{
+		bitmp = Gdiplus::Bitmap::FromFile(fileName);
+		if (bitmp == NULL)
+			return;
+		Gdiplus::BitmapData* bmpData = new Gdiplus::BitmapData();
+		Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
+		bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
+		histr.clear();
+		histg.clear();
+		histb.clear();
+		histj.clear();;
+		histr.assign(256, 0);
+		histg.assign(256, 0);
+		histb.assign(256, 0);
+		histj.assign(256, 0);
+		Utils::Threading(histr, histg, histb, histj, bitmp->GetWidth(), bitmp->GetHeight(), bmpData->Scan0, bmpData->Stride, tn, fn);
+		bitmp->UnlockBits(bmpData);
+		return;
+	}
+	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, bool right)
+	{
+		Gdiplus::BitmapData* bmpData = new Gdiplus::BitmapData();
+		Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
+		Gdiplus::Bitmap* bitmpC = bitmp->Clone(rectangle, PixelFormat32bppRGB);
+		Gdiplus::BitmapData* bmpDataC = new Gdiplus::BitmapData();
+		bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
+		bitmpC->LockBits(&rectangle, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, bmpDataC);
+
+		Utils::Rotate(bmpData->Scan0, bmpDataC->Scan0, bmpData->Stride, bitmp->GetWidth(), bitmp->GetHeight(), right);
+
+		bitmpC->UnlockBits(bmpDataC);
+		bitmp->UnlockBits(bmpData);
+		bitmp = bitmpC->Clone(rectangle, PixelFormat32bppRGB);
+	}
 }

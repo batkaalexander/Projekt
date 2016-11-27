@@ -32,7 +32,8 @@ public:
 	{
 		WM_DRAW_IMAGE = (WM_USER + 1),
 		WM_DRAW_HISTOGRAM,
-		WM_SET_BITMAP
+		WM_SET_BITMAP,
+		WM_ROTATE_IMAGE
 	};
 
 	CApplicationDlg(CWnd* pParent = NULL);	// standard constructor
@@ -63,7 +64,9 @@ protected:
 	std::vector<int> m_uHistJas;
 	std::atomic<std::thread::id> m_thread_id;
 	std::atomic<int> num_m_thread = 1;
+	std::atomic<bool> m_rightRot;
 	void OpenImage(CString fName);
+	void RotateImage();
 	// Generated message map functions
 	BOOL OnInitDialog() override;
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
@@ -83,6 +86,7 @@ public:
 	afx_msg LRESULT OnDrawImage(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnDrawHistogram(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnSetBitmap(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnRotateBitmap(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnDestroy();
 protected:
 	CListCtrl m_ctrlFileList;
