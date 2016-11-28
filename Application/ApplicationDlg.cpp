@@ -376,7 +376,7 @@ LRESULT CApplicationDlg::OnDrawImage(WPARAM wParam, LPARAM lParam)
 
 		Gdiplus::Graphics gr(lpDI->hDC);
 		Gdiplus::Rect destRect(rct.left + (rct.Width() - nWidth) / 2, rct.top + (rct.Height() - nHeight) / 2, nWidth, nHeight);
-		gr.DrawImage(m_pBitmap, destRect);
+	    gr.DrawImage(m_pBitmap, destRect);
 	}
 
 	CBrush brBlack(RGB(0, 0, 0));
@@ -632,7 +632,7 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, const int tn, std::function<bool()> fn);
-	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, int right);
+	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, Gdiplus::Bitmap *&bitmpC, int right);
 }
 
 void CApplicationDlg::OpenImage(CString fName)
@@ -644,10 +644,10 @@ void CApplicationDlg::OpenImage(CString fName)
 	std::vector<int> lhistj;
 	std::thread::id thisThread = std::this_thread::get_id();
 	m_thread_id = thisThread;
-	LoadAndCalc(fName, bmp, lhistr, lhistg, lhistb, lhistj, num_m_thread, [this , thisThread]() {return m_thread_id != thisThread; });
+	LoadAndCalc(fName, bmp, lhistr, lhistg, lhistb, lhistj, num_m_thread, [this, thisThread]() {return m_thread_id != thisThread; });
 	if (thisThread == m_thread_id)
 	{
-		std::tuple<std::thread::id , Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> obj(thisThread, bmp, lhistr, lhistg, lhistb, lhistj);
+		std::tuple<std::thread::id, Gdiplus::Bitmap*, std::vector<int>&, std::vector<int>&, std::vector<int>&, std::vector<int>&> obj(thisThread, bmp, lhistr, lhistg, lhistb, lhistj);
 		SendMessage(WM_SET_BITMAP, (WPARAM)&obj);
 	}
 	else
@@ -658,11 +658,12 @@ void CApplicationDlg::OpenImage(CString fName)
 
 void CApplicationDlg::RotateImage()
 {
-	if (m_pBitmap != nullptr)
+	if (m_pBitmap != nullptr && m_rightRot != 0)
 	{
 		Gdiplus::Bitmap *bmp = m_pBitmap;
-		ProcessAndRotate(bmp, m_rightRot);
-		std::tuple<Gdiplus::Bitmap*> obj(bmp);
+		Gdiplus::Bitmap *bmpC = m_pBitmapNext;
+		ProcessAndRotate(bmp, bmpC, m_rightRot);
+		std::tuple<Gdiplus::Bitmap*, Gdiplus::Bitmap*> obj(bmp, bmpC);
 		SendMessage(WM_ROTATE_IMAGE, (WPARAM)&obj);
 	}
 }
@@ -789,8 +790,9 @@ void CApplicationDlg::OnUpdateHistogramJas(CCmdUI *pCmdUI)
 
 LRESULT CApplicationDlg::OnRotateBitmap(WPARAM wParam, LPARAM lParam)
 {
-	auto ptuple = (std::tuple<Gdiplus::Bitmap*> *)(wParam);
+	auto ptuple = (std::tuple<Gdiplus::Bitmap*, Gdiplus::Bitmap*> *)(wParam);
 	m_pBitmap = std::get<0>(*ptuple);
+	m_pBitmapNext = std::get<1>(*ptuple);
 	m_rightRot = 0;
 	m_ctrlImage.Invalidate();
 	return 0;
@@ -959,7 +961,7 @@ namespace
 		return;
 	}
 
-	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, int right)
+	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, Gdiplus::Bitmap *&bitmpCC, int right)
 	{
 		if (right != 0)
 		{
@@ -975,7 +977,7 @@ namespace
 
 			bitmpC.UnlockBits(bmpDataC);
 			bitmp->UnlockBits(bmpData);
-			bitmp =	bitmpC.Clone(rectangleC, PixelFormat32bppRGB);
+			bitmpCC = bitmpC.Clone(rectangleC, PixelFormat32bppRGB);
 		}
 	}
 }
