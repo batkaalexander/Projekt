@@ -22,7 +22,7 @@ namespace Utils
 			histGT[i].assign(256, 0);
 			histBT[i].assign(256, 0);
 			histJT[i].assign(256, 0);
-			thready.push_back(std::thread(&Utils::CalcHistogram, std::ref(histRT[i]), std::ref(histGT[i]), std::ref(histBT[i]), std::ref(histJT[i]), (void *)((UINT32 *)(scan0) + (i*height*(UINT32)stride / (n * sizeof(UINT32)))), (UINT32)stride, height/ n, width, fn));
+			thready.push_back(std::thread(&Utils::CalcHistogram, std::ref(histRT[i]), std::ref(histGT[i]), std::ref(histBT[i]), std::ref(histJT[i]), (void *)((UINT32 *)(scan0)+(i*height*(UINT32)stride / (n * sizeof(UINT32)))), (UINT32)stride, height / n, width, fn));
 		}
 		for (int i = 0; i < n; i++)
 		{
@@ -59,34 +59,34 @@ namespace Utils
 		return;
 	}
 
-	void Rotate(void* scan0, void* scan0C, UINT32 stride, int height, int width, int right)
+	void Rotate(void* scan0, void* scan0C, UINT32 stride, UINT32 strideC, int height, int width, int right)
 	{
 		UINT32 *pLime = (UINT32*)scan0;
 		UINT32 *pLimeC = (UINT32*)scan0C;
 		//right = true rotate right 90
-		if (right==1)
+		if (right == 1)
 		{
 			for (int i = 0; i < height; i++)
 			{
 				for (int j = 0; j < width; j++)
 				{
 					pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
-					pLimeC = (UINT32*)((uint8_t*)scan0 + stride*(j) - i);
-					*pLimeC = *pLime;
+					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(j + 1) - i);
+					*&pLimeC = *&pLime;
 					pLime++;
 				}
 			}
 		}
 		//right = false rotate left 90
-		else if(right == 2)
+		else if (right == 2)
 		{
 			for (int i = 0; i < height; i++)
 			{
 				for (int j = 0; j < width; j++)
 				{
-					pLime = (UINT32*)((uint8_t*)scan0 + stride*((uint8_t)i));
-					pLimeC = (UINT32*)((uint8_t*)scan0 + stride*((uint8_t)width - (uint8_t)j) + (uint8_t)i);
-					*pLimeC = *pLime;
+					pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
+					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(width - j) + i);
+					*&pLimeC = *&pLime;
 					pLime++;
 				}
 			}
@@ -109,7 +109,7 @@ namespace Utils
 
 			csDirectory = cs + _T("\\");
 			// iterate filenames
-			for ( ; *lpstrFile; ++lpstrFile)
+			for (; *lpstrFile; ++lpstrFile)
 			{
 				names.push_back(lpstrFile);
 
