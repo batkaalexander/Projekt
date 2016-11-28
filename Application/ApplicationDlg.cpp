@@ -968,7 +968,7 @@ namespace
 			Gdiplus::BitmapData* bmpData = new Gdiplus::BitmapData();
 			Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
 			Gdiplus::Rect rectangleC(0, 0, bitmp->GetHeight(), bitmp->GetWidth());
-			Gdiplus::Bitmap& bitmpC = Gdiplus::Bitmap(bitmp->GetHeight(),bitmp->GetWidth(), PixelFormat32bppRGB);
+			Gdiplus::Bitmap bitmpC(bitmp->GetHeight(),bitmp->GetWidth(), PixelFormat32bppRGB);
 			Gdiplus::BitmapData* bmpDataC = new Gdiplus::BitmapData();
 			bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
 			bitmpC.LockBits(&rectangleC, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, bmpDataC);
@@ -977,7 +977,7 @@ namespace
 
 			bitmpC.UnlockBits(bmpDataC);
 			bitmp->UnlockBits(bmpData);
-			bitmpCC = bitmpC.Clone(rectangleC, PixelFormat32bppRGB);
+			bitmp = bitmpC.Clone(rectangleC, PixelFormat32bppRGB);
 		}
 	}
 }
