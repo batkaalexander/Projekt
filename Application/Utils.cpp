@@ -52,7 +52,7 @@ namespace Utils
 				histr[((*pLime) >> 16) & 0xff]++;
 				histg[((*pLime) >> 8) & 0xff]++;
 				histb[((*pLime)) & 0xff]++;
-				histj[(double)(0.2126*(((*pLime) >> 16) & 0xff) + 0.7152*(((*pLime) >> 8) & 0xff) + 0.0722*((*pLime) & 0xff))]++;
+				histj[(unsigned __int64)(0.2126*(((*pLime) >> 16) & 0xff) + 0.7152*(((*pLime) >> 8) & 0xff) + 0.0722*((*pLime) & 0xff))]++;
 				pLime++;
 			}
 		}
@@ -66,13 +66,13 @@ namespace Utils
 		//right = true rotate right 90
 		if (right == 1)
 		{
-			for (int i = 0; i < height; i++)
+			for (int i = 0; i < width; i++)
 			{
-				for (int j = 0; j < width; j++)
+				pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
+				for (int j = 0; j < height ; j++)
 				{
-					pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
-					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(j + 1) - i);
-					*&pLimeC = *&pLime;
+					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(j + 1) + (- i - 1)*sizeof(UINT32));
+					*pLimeC = *pLime;
 					pLime++;
 				}
 			}
@@ -80,13 +80,13 @@ namespace Utils
 		//right = false rotate left 90
 		else if (right == 2)
 		{
-			for (int i = 0; i < height; i++)
+			for (int i = 0; i < width; i++)
 			{
-				for (int j = 0; j < width; j++)
+				pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
+				for (int j = 0; j < height; j++)
 				{
-					pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
-					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(width - j) + i);
-					*&pLimeC = *&pLime;
+					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(height - j - 1) + i * sizeof(UINT32));
+					*pLimeC = *pLime;
 					pLime++;
 				}
 			}

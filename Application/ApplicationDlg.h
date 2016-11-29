@@ -52,6 +52,8 @@ protected:
 
 	// Implementation
 protected:
+	// rotation with clock rotation
+
 	HICON m_hIcon;
 
 	bool m_bHistRed = false;
@@ -64,8 +66,11 @@ protected:
 	std::vector<int> m_uHistJas;
 	std::atomic<std::thread::id> m_thread_id;
 	std::atomic<int> num_m_thread = 1;
-	// 0 none, 1 right, 2 left
+	// 0 none, 1 right90, 2 left90, 3 right45, 4 left45 
 	int m_rightRot=0;
+	// actual rotation in degrees
+	int m_rotState = 0;
+
 	void OpenImage(CString fName);
 	void RotateImage();
 	// Generated message map functions
@@ -103,7 +108,6 @@ protected:
 	CLogDlg m_ctrlLog;
 
 	Gdiplus::Bitmap *m_pBitmap;
-	Gdiplus::Bitmap *m_pBitmapNext;
 	DWORD m_nMaxThreads;
 public:
 	afx_msg void OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult);
@@ -131,8 +135,12 @@ public:
 	afx_msg void OnUpdate8(CCmdUI *pCmdUI);
 	afx_msg void On16();
 	afx_msg void OnUpdate16(CCmdUI *pCmdUI);
-	afx_msg void OnEfectRotateleft();
-	afx_msg void OnUpdateEfectRotateleft(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateEfectRotateright(CCmdUI *pCmdUI);
-	afx_msg void OnEfectRotateright();
+	afx_msg void OnRotateleft45();
+	afx_msg void OnUpdateRotateleft45(CCmdUI *pCmdUI);
+	afx_msg void OnRotateleft90();
+	afx_msg void OnUpdateRotateleft90(CCmdUI *pCmdUI);
+	afx_msg void OnRotateright45();
+	afx_msg void OnUpdateRotateright45(CCmdUI *pCmdUI);
+	afx_msg void OnRotateright90();
+	afx_msg void OnUpdateRotateright90(CCmdUI *pCmdUI);
 };
