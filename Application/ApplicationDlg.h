@@ -65,7 +65,7 @@ protected:
 	std::vector<int> m_uHistGreen;
 	std::vector<int> m_uHistJas;
 	std::atomic<std::thread::id> m_thread_id;
-	std::atomic<int> num_m_thread = 1;
+	std::atomic<int> num_m_thread = std::thread::hardware_concurrency();
 	// 0 none, 1 right90, 2 left90, 3 right45, 4 left45 
 	int m_rightRot=0;
 	// actual rotation in degrees

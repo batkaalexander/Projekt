@@ -1011,6 +1011,7 @@ void CApplicationDlg::OnRotateleft45()
 {
 	// TODO: Add your command handler code here
 	m_rightRot = 4;
+	RotateImage();
 	Invalidate();
 }
 
@@ -1018,26 +1019,26 @@ void CApplicationDlg::OnRotateleft45()
 void CApplicationDlg::OnUpdateRotateleft45(CCmdUI *pCmdUI)
 {
 	// TODO: Add your command update UI handler code here
-	RotateImage();
 }
 
 void CApplicationDlg::OnRotateleft90()
 {
 	// TODO: Add your command handler code here
 	m_rightRot = 2;
+	RotateImage();
 	Invalidate();
 }
 
 void CApplicationDlg::OnUpdateRotateleft90(CCmdUI *pCmdUI)
 {
 	// TODO: Add your command update UI handler code here
-	RotateImage();
 }
 
 void CApplicationDlg::OnRotateright45()
 {
 	// TODO: Add your command handler code here
 	m_rightRot = 3;
+	RotateImage();
 	Invalidate();
 }
 
@@ -1045,7 +1046,6 @@ void CApplicationDlg::OnRotateright45()
 void CApplicationDlg::OnUpdateRotateright45(CCmdUI *pCmdUI)
 {
 	// TODO: Add your command update UI handler code here
-	RotateImage();
 }
 
 
@@ -1053,6 +1053,7 @@ void CApplicationDlg::OnRotateright90()
 {
 	// TODO: Add your command handler code here
 	m_rightRot = 1;
+	RotateImage();
 	Invalidate();
 }
 
@@ -1060,5 +1061,4 @@ void CApplicationDlg::OnRotateright90()
 void CApplicationDlg::OnUpdateRotateright90(CCmdUI *pCmdUI)
 {
 	// TODO: Add your command update UI handler code here
-	RotateImage();
 }
