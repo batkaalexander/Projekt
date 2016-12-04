@@ -108,6 +108,7 @@ protected:
 	CLogDlg m_ctrlLog;
 
 	Gdiplus::Bitmap *m_pBitmap;
+	Gdiplus::Bitmap *m_pBitmapBackUp;
 	DWORD m_nMaxThreads;
 public:
 	afx_msg void OnLvnItemchangedFileList(NMHDR *pNMHDR, LRESULT *pResult);

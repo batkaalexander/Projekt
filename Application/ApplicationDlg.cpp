@@ -12,6 +12,9 @@
 #include <omp.h>
 #include <thread>
 #include <functional>
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -312,7 +315,7 @@ namespace
 		for (int i = 0; i < hist.size(); i++)
 		{
 
-			DC->FillSolidRect(rc.left + (i)*scaleX, rc.bottom - (hist[i])*scaleY, 1, (hist[i])*scaleY, clr);
+			DC->FillSolidRect((int)(rc.left + (i)*scaleX), (int)(rc.bottom - (hist[i])*scaleY), 1, (int)((hist[i])*scaleY), clr);
 		}
 		return;
 	}
@@ -556,7 +559,7 @@ void CApplicationDlg::OnFileOpen()
 {
 	CFileDialog dlg(true, nullptr, nullptr
 		, OFN_ALLOWMULTISELECT | OFN_FILEMUSTEXIST | OFN_NONETWORKBUTTON | OFN_PATHMUSTEXIST
-		, _T("Bitmap Files (*.bmp)|*.bmp|JPEG Files (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG Files (*.png)|*.png||")
+		, _T("JPEG Files (*.jpg;*.jpeg)|*.jpg;*.jpeg | Bitmap Files (*.bmp)|*.bmp|PNG Files (*.png)|*.png||")
 		, this);
 	CString cs;
 	const int maxFiles = 100;
@@ -664,7 +667,7 @@ void CApplicationDlg::RotateImage()
 {
 	if (m_pBitmap != nullptr && m_rightRot != 0)
 	{
-		Gdiplus::Bitmap *bmp = m_pBitmap;
+		Gdiplus::Bitmap *bmp = m_pBitmapBackUp;
 		switch (m_rightRot)
 		{
 		case 1:
@@ -683,7 +686,7 @@ void CApplicationDlg::RotateImage()
 
 		if (m_rotState < 0)
 		{
-			m_rotState = 360 - m_rotState;
+			m_rotState = 360 + m_rotState;
 		}
 		else
 		{
@@ -833,10 +836,13 @@ LRESULT CApplicationDlg::OnSetBitmap(WPARAM wParam, LPARAM lParam)
 	if (std::get<0>(*ptuple) == m_thread_id)
 	{
 		m_pBitmap = std::get<1>(*ptuple);
+		m_pBitmapBackUp = std::get<1>(*ptuple);
 		m_uHistRed = std::move(std::get<2>(*ptuple));
 		m_uHistGreen = std::move(std::get<3>(*ptuple));
 		m_uHistBlue = std::move(std::get<4>(*ptuple));
 		m_uHistJas = std::move(std::get<5>(*ptuple));
+		m_rightRot = 0;
+		m_rotState = 0;
 		m_ctrlImage.Invalidate();
 		m_ctrlHistogram.Invalidate();
 	}
@@ -959,6 +965,7 @@ namespace
 		histj.assign(256, 0);
 		Utils::Threading(histr, histg, histb, histj, bitmp->GetWidth(), bitmp->GetHeight(), bmpData->Scan0, bmpData->Stride, tn, fn);
 		bitmp->UnlockBits(bmpData);
+		delete bmpData;
 		return;
 	}
 
@@ -967,42 +974,41 @@ namespace
 		if (right != 0)
 		{
 			Gdiplus::BitmapData* bmpData = new Gdiplus::BitmapData();
-			if (rotState % 90 == 0)
-			{
-				Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
-				Gdiplus::Rect rectangleC(0, 0, bitmp->GetHeight(), bitmp->GetWidth());
-				Gdiplus::Bitmap bitmpC(bitmp->GetHeight(), bitmp->GetWidth(), PixelFormat32bppRGB);
-				Gdiplus::BitmapData* bmpDataC = new Gdiplus::BitmapData();
-				bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
-				bitmpC.LockBits(&rectangleC, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, bmpDataC);
+			int height = bitmp->GetHeight();
+			int width = bitmp->GetWidth();
+			float radians = (2 * 3.1416f*rotState) / 360;
+			float cosine = (float)cos(radians);
+			float sine = (float)sin(radians);
 
-				Utils::Rotate(bmpData->Scan0, bmpDataC->Scan0, bmpData->Stride, bmpDataC->Stride, bitmp->GetWidth(), bitmp->GetHeight(), right);
+			float Point1x = (-height*sine);
+			float Point1y = (height*cosine);
+			float Point2x = (width*cosine - height*sine);
+			float Point2y = (height*cosine + width*sine);
+			float Point3x = (width*cosine);
+			float Point3y = (width*sine);
 
-				bitmpC.UnlockBits(bmpDataC);
-				bitmp->UnlockBits(bmpData);
-				bitmp = bitmpC.Clone(rectangleC, PixelFormat32bppRGB);
-			}
-			if (rotState % 45 == 0 && (rotState / 45) % 2 != 0)
-			{
-				/*
-				radian=(2*pi*degree)/360
-				newx=x*cos(angle)+y*sin(angle)
-				newy=y*cos(angle)-x*sin(angle) 
-				*/
+			float minx = min(0, min(Point1x, min(Point2x, Point3x)));
+			float miny = min(0, min(Point1y, min(Point2y, Point3y)));
+			float maxx = max(Point1x, max(Point2x, Point3x));
+			float maxy = max(Point1y, max(Point2y, Point3y));
 
-				Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
-				Gdiplus::Rect rectangleC(0, 0, bitmp->GetHeight(), bitmp->GetWidth());
-				Gdiplus::Bitmap bitmpC(bitmp->GetHeight(), bitmp->GetWidth(), PixelFormat32bppRGB);
-				Gdiplus::BitmapData* bmpDataC = new Gdiplus::BitmapData();
-				bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
-				bitmpC.LockBits(&rectangleC, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, bmpDataC);
+			int DestBitmapWidth = (int)ceil(fabs(maxx) - minx);
+			int DestBitmapHeight = (int)ceil(fabs(maxy) - miny);
 
-				Utils::Rotate(bmpData->Scan0, bmpDataC->Scan0, bmpData->Stride, bmpDataC->Stride, bitmp->GetWidth(), bitmp->GetHeight(), right);
+			Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
+			Gdiplus::Rect rectangleC(0, 0, DestBitmapWidth, DestBitmapHeight);
+			Gdiplus::Bitmap bitmpC(DestBitmapWidth, DestBitmapHeight, PixelFormat32bppRGB);
+			Gdiplus::BitmapData* bmpDataC = new Gdiplus::BitmapData();
+			bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
+			bitmpC.LockBits(&rectangleC, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, bmpDataC);
 
-				bitmpC.UnlockBits(bmpDataC);
-				bitmp->UnlockBits(bmpData);
-				bitmp = bitmpC.Clone(rectangleC, PixelFormat32bppRGB);
-			}
+			Utils::Rotate(bmpData->Scan0, bmpDataC->Scan0, bmpData->Stride, bmpDataC->Stride, height, width, rotState);
+
+			bitmpC.UnlockBits(bmpDataC);
+			bitmp->UnlockBits(bmpData);
+			bitmp = bitmpC.Clone(rectangleC, PixelFormat32bppRGB);
+			delete bmpDataC;
+			delete bmpData;
 		}
 	}
 }

@@ -63,31 +63,43 @@ namespace Utils
 	{
 		UINT32 *pLime = (UINT32*)scan0;
 		UINT32 *pLimeC = (UINT32*)scan0C;
-		//right = true rotate right 90
-		if (right == 1)
+		float radians = (2 * 3.1416f*right) / 360;
+		float cosine = (float)cos(radians);
+		float sine = (float)sin(radians);
+
+		float Point1x = (-height*sine);
+		float Point1y = (height*cosine);
+		float Point2x = (width*cosine - height*sine);
+		float Point2y = (height*cosine + width*sine);
+		float Point3x = (width*cosine);
+		float Point3y = (width*sine);
+
+		float minx = min(0, min(Point1x, min(Point2x, Point3x)));
+		float miny = min(0, min(Point1y, min(Point2y, Point3y)));
+		float maxx = max(Point1x, max(Point2x, Point3x));
+		float maxy = max(Point1y, max(Point2y, Point3y));
+
+		int DestBitmapWidth = (int)ceil(fabs(maxx) - minx);
+		int DestBitmapHeight = (int)ceil(fabs(maxy) - miny);
+
+		for (int x = 0; x < DestBitmapWidth; x++)
 		{
-			for (int i = 0; i < width; i++)
-			{
-				pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
-				for (int j = 0; j < height ; j++)
+			for (int y = 0; y < DestBitmapHeight; y++)
+			{ 
+				int SrcBitmapx = (int)((x + minx)*cosine + (y + miny)*sine);
+				int SrcBitmapy = (int)((y + miny)*cosine - (x + minx)*sine);
+				if (SrcBitmapx >= 0 && SrcBitmapx < width && SrcBitmapy >= 0 &&
+					SrcBitmapy < height)
 				{
-					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(j + 1) + (- i - 1)*sizeof(UINT32));
+					pLime = (UINT32*)((uint8_t*)scan0 + stride*(SrcBitmapy) + SrcBitmapx* sizeof(UINT32));
+					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(y)+ x * sizeof(UINT32));
 					*pLimeC = *pLime;
 					pLime++;
 				}
-			}
-		}
-		//right = false rotate left 90
-		else if (right == 2)
-		{
-			for (int i = 0; i < width; i++)
-			{
-				pLime = (UINT32*)((uint8_t*)scan0 + stride*(i));
-				for (int j = 0; j < height; j++)
+				else
 				{
-					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(height - j - 1) + i * sizeof(UINT32));
-					*pLimeC = *pLime;
-					pLime++;
+					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(y)+x * sizeof(UINT32));
+					*pLimeC = ((255 << 16) & 0xff0000) | ((255 << 8) & 0xff00) | (255 & 0xff);
 				}
 			}
 		}
