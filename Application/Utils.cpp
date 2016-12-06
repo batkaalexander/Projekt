@@ -59,7 +59,7 @@ namespace Utils
 		return;
 	}
 
-	void Rotate(void* scan0, void* scan0C, UINT32 stride, UINT32 strideC, int height, int width, int right)
+	void Rotate(void* scan0, void* scan0C, UINT32 stride, UINT32 strideC, int height, int width, int right, const int n, std::function<bool()> fn)
 	{
 		UINT32 *pLime = (UINT32*)scan0;
 		UINT32 *pLimeC = (UINT32*)scan0C;
@@ -73,26 +73,80 @@ namespace Utils
 		float Point2y = (height*cosine + width*sine);
 		float Point3x = (width*cosine);
 		float Point3y = (width*sine);
-
-		float minx = min(0, min(Point1x, min(Point2x, Point3x)));
-		float miny = min(0, min(Point1y, min(Point2y, Point3y)));
-		float maxx = max(Point1x, max(Point2x, Point3x));
-		float maxy = max(Point1y, max(Point2y, Point3y));
-
-		int DestBitmapWidth = (int)ceil(fabs(maxx) - minx);
-		int DestBitmapHeight = (int)ceil(fabs(maxy) - miny);
-
-		for (int x = 0; x < DestBitmapWidth; x++)
+		int DestBitmapWidth;
+		int DestBitmapHeight;
+		float minx;
+		float miny;
+		float maxx;
+		float maxy;
+		if (right != 135 && right != 225)
 		{
-			for (int y = 0; y < DestBitmapHeight; y++)
-			{ 
+			minx = min(0, min(Point1x, min(Point2x, Point3x)));
+			miny = min(0, min(Point1y, min(Point2y, Point3y)));
+			maxx = max(Point1x, max(Point2x, Point3x));
+			maxy = max(Point1y, max(Point2y, Point3y));
+
+			DestBitmapWidth = (int)ceil(fabs(maxx) - minx);
+			DestBitmapHeight = (int)ceil(fabs(maxy) - miny);
+		}
+		else if (right == 135)
+		{
+			minx = min(0, min(Point1x, min(Point2x, Point3x)));
+			miny = min(0, min(Point1y, min(Point2y, Point3y)));
+			maxx = max(Point1x, max(Point2x, Point3x));
+			maxy = max(Point1y, max(Point2y, Point3y));
+
+			float minxx = min(0, min(Point1x, min(-Point2x, -Point3x)));
+			float minyx = min(0, min(Point1y, min(Point2y, Point3y)));
+			float maxxx = max(Point1x, max(Point2x, -Point3x));
+			float maxyx = max(Point1y, max(Point2y, Point3y));
+
+			DestBitmapWidth = (int)ceil(fabs(maxxx) - minxx);
+			DestBitmapHeight = (int)ceil(fabs(maxyx) - minyx);
+		}
+		else if (right == 225)
+		{
+			minx = min(0, min(Point1x, min(Point2x, Point3x)));
+			miny = min(0, min(Point1y, min(Point2y, Point3y)));
+			maxx = max(Point1x, max(Point2x, Point3x));
+			maxy = max(Point1y, max(Point2y, Point3y));
+
+			float minxx = min(0, min(Point1x, min(Point2x, Point3x)));
+			float minyx = min(0, min(Point1y, min(-Point2y, Point3y)));
+			float maxxx = max(Point1x, max(Point2x, Point3x));
+			float maxyx = max(Point1y, max(Point2y, Point3y));
+
+			DestBitmapWidth = (int)ceil(fabs(maxxx) - minxx);
+			DestBitmapHeight = (int)ceil(fabs(maxyx) - minyx);
+		}
+
+		std::vector<std::thread> thready;
+		for (int i = 0; i < n; i++)
+		{
+			thready.push_back(std::thread(&Utils::RotateThreadingAlg, (void *)((UINT32 *)scan0), (void *)((UINT32 *)scan0C), (UINT32)stride, (UINT32)strideC, height, width, 0, (DestBitmapHeight / (float)n)*(i), DestBitmapWidth, (DestBitmapHeight / (float)n)*(i + 1), minx, miny, maxx, maxy, sine, cosine, fn));
+		}
+		for (int i = 0; i < n; i++)
+		{
+			thready[i].join();
+		}
+	}
+
+	void RotateThreadingAlg(void* scan0, void* scan0C, UINT32 stride, UINT32 strideC, int height, int width, int startx, int starty, int endx, int endy, float minx, float miny, float maxx, float maxy, float sine, float cosine, std::function<bool()> fn)
+	{
+		UINT32 *pLime;
+		UINT32 *pLimeC;
+		for (int x = startx; x < endx; x++)
+		{
+			if (fn()) return;
+			for (int y = starty; y < endy; y++)
+			{
 				int SrcBitmapx = (int)((x + minx)*cosine + (y + miny)*sine);
 				int SrcBitmapy = (int)((y + miny)*cosine - (x + minx)*sine);
 				if (SrcBitmapx >= 0 && SrcBitmapx < width && SrcBitmapy >= 0 &&
 					SrcBitmapy < height)
 				{
-					pLime = (UINT32*)((uint8_t*)scan0 + stride*(SrcBitmapy) + SrcBitmapx* sizeof(UINT32));
-					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(y)+ x * sizeof(UINT32));
+					pLime = (UINT32*)((uint8_t*)scan0 + stride*(SrcBitmapy)+SrcBitmapx * sizeof(UINT32));
+					pLimeC = (UINT32*)((uint8_t*)scan0C + strideC*(y)+x * sizeof(UINT32));
 					*pLimeC = *pLime;
 					pLime++;
 				}

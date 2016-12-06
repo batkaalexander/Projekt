@@ -144,4 +144,6 @@ public:
 	afx_msg void OnUpdateRotateright45(CCmdUI *pCmdUI);
 	afx_msg void OnRotateright90();
 	afx_msg void OnUpdateRotateright90(CCmdUI *pCmdUI);
+	afx_msg void OnEfectReset();
+	afx_msg void OnUpdateEfectReset(CCmdUI *pCmdUI);
 };

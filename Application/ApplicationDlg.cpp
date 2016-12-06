@@ -276,6 +276,8 @@ BEGIN_MESSAGE_MAP(CApplicationDlg, CDialogEx)
 	ON_UPDATE_COMMAND_UI(ID_ROTATERIGHT_45, &CApplicationDlg::OnUpdateRotateright45)
 	ON_COMMAND(ID_ROTATERIGHT_90, &CApplicationDlg::OnRotateright90)
 	ON_UPDATE_COMMAND_UI(ID_ROTATERIGHT_90, &CApplicationDlg::OnUpdateRotateright90)
+	ON_COMMAND(ID_EFECT_RESET, &CApplicationDlg::OnEfectReset)
+	ON_UPDATE_COMMAND_UI(ID_EFECT_RESET, &CApplicationDlg::OnUpdateEfectReset)
 END_MESSAGE_MAP()
 
 
@@ -639,7 +641,7 @@ LRESULT CApplicationDlg::OnKickIdle(WPARAM wParam, LPARAM lParam)
 namespace
 {
 	void LoadAndCalc(CString fileName, Gdiplus::Bitmap *&bitmp, std::vector<int> &histr, std::vector<int> &histg, std::vector<int> &histb, std::vector<int> &histj, const int tn, std::function<bool()> fn);
-	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, int right, int rotState);
+	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, int right, int rotState, const int tn, std::function<bool()> fn);
 }
 
 void CApplicationDlg::OpenImage(CString fName)
@@ -692,10 +694,14 @@ void CApplicationDlg::RotateImage()
 		{
 			m_rotState = m_rotState % 360;
 		}
-
-		ProcessAndRotate(bmp, m_rightRot, m_rotState);
-		std::tuple<Gdiplus::Bitmap*, int, int> obj(bmp, m_rightRot, m_rotState);
-		SendMessage(WM_ROTATE_IMAGE, (WPARAM)&obj);
+		std::thread::id thisThread = std::this_thread::get_id();
+		m_thread_id = thisThread;
+		ProcessAndRotate(bmp, m_rightRot, m_rotState, num_m_thread, [this, thisThread]() {return m_thread_id != thisThread; });
+		if (thisThread == m_thread_id)
+		{
+			std::tuple<Gdiplus::Bitmap*, int, int> obj(bmp, m_rightRot, m_rotState);
+			SendMessage(WM_ROTATE_IMAGE, (WPARAM)&obj);
+		}
 	}
 }
 
@@ -969,7 +975,7 @@ namespace
 		return;
 	}
 
-	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, int right, int rotState)
+	void ProcessAndRotate(Gdiplus::Bitmap *&bitmp, int right, int rotState, const int tn, std::function<bool()> fn)
 	{
 		if (right != 0)
 		{
@@ -987,13 +993,52 @@ namespace
 			float Point3x = (width*cosine);
 			float Point3y = (width*sine);
 
-			float minx = min(0, min(Point1x, min(Point2x, Point3x)));
-			float miny = min(0, min(Point1y, min(Point2y, Point3y)));
-			float maxx = max(Point1x, max(Point2x, Point3x));
-			float maxy = max(Point1y, max(Point2y, Point3y));
+			int DestBitmapWidth;
+			int DestBitmapHeight;
+			float minx;
+			float miny;
+			float maxx;
+			float maxy;
+			if (rotState != 135 && rotState != 225)
+			{
+				minx = min(0, min(Point1x, min(Point2x, Point3x)));
+				miny = min(0, min(Point1y, min(Point2y, Point3y)));
+				maxx = max(Point1x, max(Point2x, Point3x));
+				maxy = max(Point1y, max(Point2y, Point3y));
 
-			int DestBitmapWidth = (int)ceil(fabs(maxx) - minx);
-			int DestBitmapHeight = (int)ceil(fabs(maxy) - miny);
+				DestBitmapWidth = (int)ceil(fabs(maxx) - minx);
+				DestBitmapHeight = (int)ceil(fabs(maxy) - miny);
+			}
+			else if (rotState == 135)
+			{
+				minx = min(0, min(Point1x, min(Point2x, Point3x)));
+				miny = min(0, min(Point1y, min(Point2y, Point3y)));
+				maxx = max(Point1x, max(Point2x, Point3x));
+				maxy = max(Point1y, max(Point2y, Point3y));
+
+				float minxx = min(0, min(Point1x, min(-Point2x, -Point3x)));
+				float minyx = min(0, min(Point1y, min(Point2y, Point3y)));
+				float maxxx = max(Point1x, max(Point2x, -Point3x));
+				float maxyx = max(Point1y, max(Point2y, Point3y));
+
+				DestBitmapWidth = (int)ceil(fabs(maxxx) - minxx);
+				DestBitmapHeight = (int)ceil(fabs(maxyx) - minyx);
+			}
+			else if (rotState == 225)
+			{
+				minx = min(0, min(Point1x, min(Point2x, Point3x)));
+				miny = min(0, min(Point1y, min(Point2y, Point3y)));
+				maxx = max(Point1x, max(Point2x, Point3x));
+				maxy = max(Point1y, max(Point2y, Point3y));
+
+				float minxx = min(0, min(Point1x, min(Point2x, Point3x)));
+				float minyx = min(0, min(Point1y, min(-Point2y, Point3y)));
+				float maxxx = max(Point1x, max(Point2x, Point3x));
+				float maxyx = max(Point1y, max(Point2y, Point3y));
+
+				DestBitmapWidth = (int)ceil(fabs(maxxx) - minxx);
+				DestBitmapHeight = (int)ceil(fabs(maxyx) - minyx);
+			}
 
 			Gdiplus::Rect rectangle(0, 0, bitmp->GetWidth(), bitmp->GetHeight());
 			Gdiplus::Rect rectangleC(0, 0, DestBitmapWidth, DestBitmapHeight);
@@ -1002,7 +1047,7 @@ namespace
 			bitmp->LockBits(&rectangle, Gdiplus::ImageLockModeRead, PixelFormat32bppRGB, bmpData);
 			bitmpC.LockBits(&rectangleC, Gdiplus::ImageLockModeWrite, PixelFormat32bppRGB, bmpDataC);
 
-			Utils::Rotate(bmpData->Scan0, bmpDataC->Scan0, bmpData->Stride, bmpDataC->Stride, height, width, rotState);
+			Utils::Rotate(bmpData->Scan0, bmpDataC->Scan0, bmpData->Stride, bmpDataC->Stride, height, width, rotState, tn, fn);
 
 			bitmpC.UnlockBits(bmpDataC);
 			bitmp->UnlockBits(bmpData);
@@ -1065,6 +1110,22 @@ void CApplicationDlg::OnRotateright90()
 
 
 void CApplicationDlg::OnUpdateRotateright90(CCmdUI *pCmdUI)
+{
+	// TODO: Add your command update UI handler code here
+}
+
+
+void CApplicationDlg::OnEfectReset()
+{
+	// TODO: Add your command handler code here
+	m_pBitmap = m_pBitmapBackUp;
+	m_rightRot = 0;
+	m_rotState = 0;
+	Invalidate();
+}
+
+
+void CApplicationDlg::OnUpdateEfectReset(CCmdUI *pCmdUI)
 {
 	// TODO: Add your command update UI handler code here
 }
