@@ -61,8 +61,6 @@ namespace Utils
 
 	void Rotate(void* scan0, void* scan0C, UINT32 stride, UINT32 strideC, int height, int width, int right, const int n, std::function<bool()> fn)
 	{
-		UINT32 *pLime = (UINT32*)scan0;
-		UINT32 *pLimeC = (UINT32*)scan0C;
 		float radians = (2 * 3.1416f*right) / 360;
 		float cosine = (float)cos(radians);
 		float sine = (float)sin(radians);

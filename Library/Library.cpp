@@ -40,3 +40,13 @@ LIBRARY_API void Threading(std::vector<int> &histr, std::vector<int> &histg, std
 {
 	return Utils::Threading(histr, histg, histb, histj, width, height, scan0, stride, n, fn);
 }
+
+LIBRARY_API void Rotate(void* scan0, void* scan0C, UINT32 stride, UINT32 strideC, int height, int width, int right, const int n, std::function<bool()> fn)
+{
+	return Utils::Rotate(scan0, scan0C, stride, strideC, height, width, right, n, fn);
+}
+
+LIBRARY_API void RotateThreadingAlg(void* scan0, void* scan0C, UINT32 stride, UINT32 strideC, int height, int width, int startx, int starty, int endx, int endy, float minx, float miny, float maxx, float maxy, float sine, float cosine, std::function<bool()> fn)
+{
+	return Utils::RotateThreadingAlg(scan0, scan0C, stride, strideC, height, width, startx, starty, endx, endy, minx, miny, maxx, maxy, sine, cosine, fn);
+}
